@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
@@ -12,7 +13,8 @@ class TaskController extends Controller
      */
     public function index()
     {
-        $tasks = Task::all();
+        // Fetch all tasks with their assigned user
+        $tasks = Task::with('user')->get();
         return view('tasks.index', compact('tasks'));
     }
 
@@ -21,7 +23,9 @@ class TaskController extends Controller
      */
     public function create()
     {
-        return view('tasks.create');
+        // Fetch all users to assign the task
+        $users = User::all();
+        return view('tasks.create', compact('users'));
     }
 
     /**
@@ -29,47 +33,84 @@ class TaskController extends Controller
      */
     public function store(Request $request)
     {
+        // Validate the request
         $request->validate([
-            'title' => 'required',
-            'description' => 'nullable',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
             'due_date' => 'required|date',
-            'priority' => 'required',
+            'priority' => 'required|in:Low,Medium,High',
             'assigned_to' => 'required|exists:users,id',
         ]);
 
-        Task::create($request->all());
+        // Create the task
+        Task::create([
+            'title' => $request->title,
+            'description' => $request->description,
+            'due_date' => $request->due_date,
+            'priority' => $request->priority,
+            'assigned_to' => $request->assigned_to,
+        ]);
+
+        // Redirect with success message
         return redirect()->route('tasks.index')->with('success', 'Task created successfully.');
     }
+
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Task $task)
     {
-        //
+        return view('tasks.show', compact('task'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Task $task)
     {
-        //
+        // Fetch all users to assign the task
+        $users = User::all();
+        return view('tasks.edit', compact('task', 'users'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Task $task)
     {
-        //
+        // Validate the request
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'due_date' => 'required|date',
+            'priority' => 'required|in:Low,Medium,High',
+            'assigned_to' => 'required|exists:users,id',
+        ]);
+
+        // Update the task
+        $task->update([
+            'title' => $request->title,
+            'description' => $request->description,
+            'due_date' => $request->due_date,
+            'priority' => $request->priority,
+            'assigned_to' => $request->assigned_to,
+        ]);
+
+        // Redirect with success message
+        return redirect()->route('tasks.index')->with('success', 'Task updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Task $task)
     {
-        //
+        // Delete the task
+        $task->delete();
+
+        // Redirect with success message
+        return redirect()->route('tasks.index')->with('success', 'Task deleted successfully.');
     }
+
 }
